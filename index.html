@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Exerbeasts</title>
+        <link rel="stylesheet" href="css/styles.css">
+        <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    </head>
+    <body>
+        <div class="game-container">
+            <!-- Main Content Area  -->
+             
+            <main class="main-content">
+                <!-- Game Canvas (Left Side) -->
+                <section class="game-canvas-container">
+                    <div class="game-canvas" id="game-canvas">
+                        <!-- Phaser.js will render here -->
+                    </div>
+                    
+                    <!-- Pokemon-style Battle Interface -->
+                    <div id="battle-interface" class="battle-ui-container">
+                        <div class="dialog-section">
+                            <div class="dialog-box">
+                                <p id="battle-text">What will you do?</p>
+                            </div>
+                        </div>
+                        <div class="action-section">
+                            <div class="action-menu">
+                                <button class="action-btn squat-btn" data-move="squat">SQUAT</button>
+                                <button class="action-btn lunge-btn" data-move="lunge">LUNGE</button>
+                                <button class="action-btn plank-btn" data-move="plank">PLANK</button>
+                                <button class="action-btn tpose-btn" data-move="tpose">TPOSE</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right Sidebar -->
+                <aside class="right-sidebar">
+                    <!-- Webcam Panel (Top Right) -->
+                    <div class="webcam-panel">
+                        <h2>Webcam - Image Recognition</h2>
+                        <div class="webcam-feed" id="webcam-container">
+                            <div class="webcam-placeholder">
+                                📹 Webcam Feed<br>
+                                <small>Initializing camera...</small>
+                            </div>
+                        </div>
+                        <div class="pose-display">
+                            <div class="pose-text">No Pose Detected</div>
+                            <div class="confidence-text">0% Confidence</div>
+                        </div>
+                        <div id="label-container" style="display: none;"></div>
+                    </div>
+
+                    <!-- Fitness PAL Panel (Bottom Right) -->
+                    <div class="fitness-pal-panel">
+                        <h2>Fitness PAL</h2>
+                        <div class="pal-content">
+                            <img class="pal-img" src="assets/mole1.png">
+                        </div>
+                    </div>
+                </aside>
+            </main>
+
+        </div>
+
+        <script src="js/main.js"></script>
+    </body>
+</html> 
