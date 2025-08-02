@@ -1,7 +1,17 @@
 // Exerbeasts - Complete Pokemon-style Battle Game
 // Using Phaser.js for retro arcade battle system
 
+import { Feedback } from './feedback.js';
+import { MenuVoiceControllerFree } from './menuVoiceControllerFree.js';
+
 console.log('Exerbeasts - Battle System Initializing...');
+
+// Set your Gemini API key here (DO NOT use in production, for personal/local use only)
+const GEMINI_API_KEY = '';
+
+// You can pass the API key here or set window.GEMINI_API_KEY
+const controller = new MenuVoiceControllerFree();
+const feedback = new Feedback(GEMINI_API_KEY);
 
 // Battle Game Configuration
 const BATTLE_CONFIG = {
@@ -393,6 +403,32 @@ class BattleState {
             button.style.opacity = '1';
             button.style.pointerEvents = 'auto';
         });
+
+        // Continuously listen for a pose (transcript) and map it to a move type
+        const listenForPose = async () => {
+            if (this.buttonsDisabled) return;
+            const pose = await voiceControl();
+            // Map the returned pose to a move type
+            const moveMap = {
+                'squat': 'squat',
+                'lunge': 'lunge',
+                'plank': 'plank',
+                't-pose': 'tpose',
+                't pose': 'tpose',
+                'tpose': 'tpose',
+                'tee pose': 'tpose',
+                'teepose': 'tpose'
+            };
+            const normalizedPose = pose ? pose.toLowerCase().trim() : '';
+            const moveType = moveMap[normalizedPose];
+            if (!this.buttonsDisabled && moveType) {
+                this.processPlayerMove(moveType);
+            } else if (!this.buttonsDisabled) {
+                // If no valid pose, keep listening
+                listenForPose();
+            }
+        };
+        listenForPose();
     }
 }
 
@@ -707,6 +743,11 @@ function createUI(scene) {
     }
     if (window.updatePlayerHPText) {
         window.updatePlayerHPText(100, 100);
+    }
+
+    // Start voice detection for the first attack
+    if (typeof battleState !== 'undefined' && battleState && typeof battleState.enableActionButtons === 'function') {
+        battleState.enableActionButtons();
     }
 }
 
@@ -1533,10 +1574,48 @@ function triggerBattleMoveFromPose(pose, confidence) {
         
         // Add a brief confirmation message before executing
         battleState.updateBattleText(`Perfect ${pose}! Executing attack...`);
+
+        // snaps a screenshot of the webcam canvas and gives feedback
+        if (!webcam || !webcam.canvas) {
+            console.error("Webcam not initialized or canvas not available.");
+            return;
+        }
+        const image = webcam.canvas;
+        const dataURL = webcam.canvas.toDataURL('image/png');
+        callFeedback(dataURL, pose);
         
-        // Execute the move after a short delay
+        // Execute the move after a short delay, after feedback is done
         setTimeout(() => {
             battleState.executePlayerMove();
         }, 1000);
+    }
+}
+
+// gemini feedback
+async function callFeedback(file, exercise) {
+    try {
+        const result = await feedback.analyzeFitnessImage(file, exercise);
+        //${result.mood};
+        // Speak the feedback using Web Speech API
+        if ('speechSynthesis' in window && result && result.feedback) {
+            const utter = new SpeechSynthesisUtterance(result.feedback);
+            window.speechSynthesis.speak(utter);
+        }
+    } catch (err) {
+        console.log(`Error: ${err.message}`);
+    }
+}
+
+async function voiceControl() {
+    try {
+        // Now returns the transcript/pose instead of a mapped command
+        const result = await controller.listenAndMapCommand();
+        if (typeof result === 'object' && result !== null && 'transcript' in result) {
+            return result.transcript;
+        } else {
+            return;
+        }
+    } catch (err) {
+        console.log(`Voice control error: ${err.message}`);
     }
 }
