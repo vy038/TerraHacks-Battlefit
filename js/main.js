@@ -5,11 +5,9 @@ import { Feedback } from './feedback.js';
 
 console.log('Exerbeasts - Battle System Initializing...');
 
-// Set your Gemini API key here (DO NOT use in production, for personal/local use only)
-const GEMINI_API_KEY = 'Enter Gemini Key';
 
 // Initialize feedback system
-const feedback = new Feedback(GEMINI_API_KEY);
+const feedback = new Feedback();
 
 // Battle Game Configuration
 const BATTLE_CONFIG = {
