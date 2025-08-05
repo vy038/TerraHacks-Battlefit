@@ -2,12 +2,16 @@
 // Using Phaser.js for retro arcade battle system
 
 import { Feedback } from './feedback.js';
+import { MenuVoiceControllerFree } from './menuVoiceControllerFree.js';
 
 console.log('Exerbeasts - Battle System Initializing...');
 
+// Set your Gemini API key here (DO NOT use in production, for personal/local use only)
+const GEMINI_API_KEY = '';
 
-// Initialize feedback system
-const feedback = new Feedback();
+// You can pass the API key here or set window.GEMINI_API_KEY
+const controller = new MenuVoiceControllerFree();
+const feedback = new Feedback(GEMINI_API_KEY);
 
 // Battle Game Configuration
 const BATTLE_CONFIG = {
@@ -32,307 +36,6 @@ const BATTLE_CONFIG = {
         update: update
     }
 };
-
-// Enhanced Voice Command and Motivation System
-class VoiceCommandController {
-    constructor() {
-        this.isListening = false;
-        this.recognition = null;
-        this.motivationalPhrases = [
-            "Amazing form!",
-            "Great job!",
-            "Perfect execution!",
-            "You're crushing it!",
-            "Fantastic technique!",
-            "Keep it up, champion!",
-            "Excellent work!",
-            "Outstanding effort!",
-            "You're on fire!",
-            "Incredible power!",
-            "Superb form!",
-            "Way to go!",
-            "Brilliant move!",
-            "You're unstoppable!",
-            "Phenomenal attack!"
-        ];
-        this.initializeSpeechRecognition();
-        this.setupVoiceSettings();
-    }
-
-    initializeSpeechRecognition() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if (!SpeechRecognition) {
-            console.error('Speech Recognition not supported in this browser');
-            // Show a message to the user
-            this.showSpeechRecognitionError();
-            return;
-        }
-
-        this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true;
-        this.recognition.interimResults = false;
-        this.recognition.lang = 'en-US';
-        this.recognition.maxAlternatives = 3;
-
-        this.recognition.onstart = () => {
-            console.log('Voice command listening started');
-            this.isListening = true;
-            this.updateVoiceIndicator(true);
-        };
-
-        this.recognition.onend = () => {
-            console.log('Voice command listening ended');
-            this.isListening = false;
-            this.updateVoiceIndicator(false);
-            // Restart listening if battle is still active
-            if (battleState && battleState.currentState === 'menu-selection' && !battleState.buttonsDisabled) {
-                setTimeout(() => this.startListening(), 500);
-            }
-        };
-
-        this.recognition.onresult = (event) => {
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                    const transcript = event.results[i][0].transcript.toLowerCase().trim();
-                    console.log('Voice command heard:', transcript);
-                    this.processVoiceCommand(transcript);
-                }
-            }
-        };
-
-        this.recognition.onerror = (event) => {
-            console.log('Speech recognition error:', event.error);
-            if (event.error === 'no-speech' || event.error === 'audio-capture') {
-                // Restart listening after a brief pause
-                setTimeout(() => {
-                    if (battleState && battleState.currentState === 'menu-selection' && !battleState.buttonsDisabled) {
-                        this.startListening();
-                    }
-                }, 1000);
-            } else if (event.error === 'not-allowed') {
-                this.showMicrophonePermissionError();
-            }
-        };
-    }
-
-    setupVoiceSettings() {
-        // Wait for voices to load
-        const setupVoice = () => {
-            const voices = speechSynthesis.getVoices();
-            
-            // Prefer female/child voices for a more cartoonish, happy sound
-            const preferredVoices = voices.filter(voice => 
-                voice.lang.startsWith('en') && (
-                    voice.name.toLowerCase().includes('female') ||
-                    voice.name.toLowerCase().includes('woman') ||
-                    voice.name.toLowerCase().includes('girl') ||
-                    voice.name.toLowerCase().includes('child') ||
-                    voice.name.toLowerCase().includes('zira') ||
-                    voice.name.toLowerCase().includes('hazel') ||
-                    voice.name.toLowerCase().includes('karen') ||
-                    voice.name.toLowerCase().includes('samantha')
-                )
-            );
-
-            // If no preferred voices, fall back to any English voice
-            this.selectedVoice = preferredVoices[0] || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
-            
-            console.log('Selected voice:', this.selectedVoice?.name || 'Default');
-        };
-
-        // Setup immediately if voices are already loaded
-        if (speechSynthesis.getVoices().length > 0) {
-            setupVoice();
-        } else {
-            // Wait for voices to load
-            speechSynthesis.addEventListener('voiceschanged', setupVoice, { once: true });
-        }
-    }
-
-    processVoiceCommand(transcript) {
-        if (!battleState || battleState.buttonsDisabled || battleState.currentState !== 'menu-selection') {
-            return;
-        }
-
-        // Enhanced voice command mapping with more variations
-        const commandMap = {
-            'squat': ['squat', 'squad', 'squats', 'thunder stomp', 'thunder', 'stomp', 'attack', 'hit'],
-            'lunge': ['lunge', 'lunch', 'lunges', 'swift strike', 'swift', 'strike', 'quick', 'fast'],
-            'plank': ['plank', 'planks', 'iron defense', 'iron', 'defense', 'defend', 'block', 'shield'],
-            'tpose': ['t pose', 'tpose', 't-pose', 'tea pose', 'intimidate', 'T pose', 'tee pose', 'teepose', 'intimidation']
-        };
-
-        // Check for command matches with improved matching
-        for (const [moveType, commands] of Object.entries(commandMap)) {
-            for (const command of commands) {
-                if (transcript.includes(command)) {
-                    console.log(`Voice command matched: ${command} -> ${moveType}`);
-                    this.executeVoiceCommand(moveType);
-                    return;
-                }
-            }
-        }
-
-        // Additional fuzzy matching for common variations
-        const text = transcript.toLowerCase();
-        if (text.includes('squat') || text.includes('thunder') || text.includes('stomp')) {
-            console.log('Voice command matched: squat variation');
-            this.executeVoiceCommand('squat');
-            return;
-        }
-        if (text.includes('lunge') || text.includes('swift') || text.includes('strike')) {
-            console.log('Voice command matched: lunge variation');
-            this.executeVoiceCommand('lunge');
-            return;
-        }
-        if (text.includes('plank') || text.includes('iron') || text.includes('defense')) {
-            console.log('Voice command matched: plank variation');
-            this.executeVoiceCommand('plank');
-            return;
-        }
-        if (text.includes('t pose') || text.includes('tpose') || text.includes('intimidate')) {
-            console.log('Voice command matched: tpose variation');
-            this.executeVoiceCommand('tpose');
-            return;
-        }
-
-        console.log('No matching voice command found for:', transcript);
-    }
-
-    executeVoiceCommand(moveType) {
-        // Stop listening temporarily to prevent interference
-        this.stopListening();
-
-        // Trigger the button click effect
-        const button = document.querySelector(`[data-move="${moveType}"]`);
-        if (button) {
-            // Visual feedback
-            button.style.transform = 'scale(0.95)';
-            button.style.filter = 'brightness(1.3)';
-            
-            setTimeout(() => {
-                button.style.transform = '';
-                button.style.filter = '';
-            }, 200);
-
-            // Execute the move
-            if (battleState) {
-                battleState.processPlayerMove(moveType);
-            }
-        }
-        
-        // Restart listening after a delay to allow the move to process
-        setTimeout(() => {
-            if (battleState && battleState.currentState === 'menu-selection' && !battleState.buttonsDisabled) {
-                this.startListening();
-            }
-        }, 2000);
-    }
-
-    speakMotivation() {
-        if (!speechSynthesis) return;
-
-        // Stop any current speech
-        speechSynthesis.cancel();
-
-        // Random motivational phrase
-        const phrase = this.motivationalPhrases[Math.floor(Math.random() * this.motivationalPhrases.length)];
-        
-        const utterance = new SpeechSynthesisUtterance(phrase);
-        
-        // Cartoonish, happy voice settings
-        utterance.rate = 1.1; // Slightly faster for energy
-        utterance.pitch = 1.4; // Higher pitch for cartoonish effect
-        utterance.volume = 0.8;
-        
-        // Use the selected voice if available
-        if (this.selectedVoice) {
-            utterance.voice = this.selectedVoice;
-        }
-
-        // Add some enthusiasm with emphasis
-        utterance.addEventListener('start', () => {
-            console.log('Speaking motivation:', phrase);
-        });
-
-        speechSynthesis.speak(utterance);
-    }
-
-    startListening() {
-        if (this.recognition && !this.isListening) {
-            try {
-                this.recognition.start();
-            } catch (error) {
-                console.log('Error starting voice recognition:', error);
-            }
-        }
-    }
-
-    stopListening() {
-        if (this.recognition && this.isListening) {
-            this.recognition.stop();
-        }
-    }
-
-    updateVoiceIndicator(isListening) {
-        const indicator = document.getElementById('voice-indicator');
-        if (indicator) {
-            const pulseDot = indicator.querySelector('div[style*="animation: pulse"]');
-            if (pulseDot) {
-                pulseDot.style.background = isListening ? '#00FF00' : '#FF0000';
-            }
-        }
-    }
-
-    showSpeechRecognitionError() {
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 0, 0, 0.9);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            z-index: 10000;
-            text-align: center;
-            max-width: 400px;
-        `;
-        errorDiv.innerHTML = `
-            <h3>🎤 Voice Commands Not Available</h3>
-            <p>Your browser doesn't support speech recognition. Please use Chrome, Edge, or Safari for voice commands.</p>
-            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 8px 16px; border: none; border-radius: 5px; background: white; color: red; cursor: pointer;">OK</button>
-        `;
-        document.body.appendChild(errorDiv);
-    }
-
-    showMicrophonePermissionError() {
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 165, 0, 0.9);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            z-index: 10000;
-            text-align: center;
-            max-width: 400px;
-        `;
-        errorDiv.innerHTML = `
-            <h3>🎤 Microphone Permission Required</h3>
-            <p>Please allow microphone access to use voice commands. Click the microphone icon in your browser's address bar.</p>
-            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 8px 16px; border: none; border-radius: 5px; background: white; color: orange; cursor: pointer;">OK</button>
-        `;
-        document.body.appendChild(errorDiv);
-    }
-}
 
 // Enhanced Battle State Management
 class BattleState {
@@ -426,13 +129,6 @@ class BattleState {
                     // After player animation completes, play enemy hurt animation
                     playEnemyHurtAnimation();
                     
-                    // Add motivational speech after successful attack
-                    setTimeout(() => {
-                        if (window.voiceController) {
-                            window.voiceController.speakMotivation();
-                        }
-                    }, 1000);
-                    
                     setTimeout(() => {
                         this.animateEnemyHPDecrease();
                         
@@ -460,13 +156,6 @@ class BattleState {
                 playPlayerLungeAttackAnimation(() => {
                     // After player animation completes, play enemy hurt animation
                     playEnemyHurtAnimation();
-                    
-                    // Add motivational speech after successful attack
-                    setTimeout(() => {
-                        if (window.voiceController) {
-                            window.voiceController.speakMotivation();
-                        }
-                    }, 1000);
                     
                     setTimeout(() => {
                         this.animateEnemyHPDecrease();
@@ -703,11 +392,6 @@ class BattleState {
             button.style.opacity = '0.5';
             button.style.pointerEvents = 'none';
         });
-
-        // Stop voice command listening
-        if (window.voiceController) {
-            window.voiceController.stopListening();
-        }
     }
     
     // Enable action buttons
@@ -720,12 +404,31 @@ class BattleState {
             button.style.pointerEvents = 'auto';
         });
 
-        // Start voice command listening
-        if (window.voiceController) {
-            setTimeout(() => {
-                window.voiceController.startListening();
-            }, 500);
-        }
+        // Continuously listen for a pose (transcript) and map it to a move type
+        const listenForPose = async () => {
+            if (this.buttonsDisabled) return;
+            const pose = await voiceControl();
+            // Map the returned pose to a move type
+            const moveMap = {
+                'squat': 'squat',
+                'lunge': 'lunge',
+                'plank': 'plank',
+                't-pose': 'tpose',
+                't pose': 'tpose',
+                'tpose': 'tpose',
+                'tee pose': 'tpose',
+                'teepose': 'tpose'
+            };
+            const normalizedPose = pose ? pose.toLowerCase().trim() : '';
+            const moveType = moveMap[normalizedPose];
+            if (!this.buttonsDisabled && moveType) {
+                this.processPlayerMove(moveType);
+            } else if (!this.buttonsDisabled) {
+                // If no valid pose, keep listening
+                listenForPose();
+            }
+        };
+        listenForPose();
     }
 }
 
@@ -1591,78 +1294,6 @@ function updatePlayerHPText(currentHP, maxHP) {
 window.updateEnemyHPText = updateEnemyHPText;
 window.updatePlayerHPText = updatePlayerHPText;
 
-// Add visual indicator for voice commands
-function addVoiceCommandIndicator() {
-    const indicator = document.createElement('div');
-    indicator.id = 'voice-indicator';
-    indicator.innerHTML = `
-        <div style="
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 25px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            z-index: 1000;
-            border: 2px solid #00ACC1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        ">
-            🎤 Voice Commands Active
-            <div style="
-                width: 8px;
-                height: 8px;
-                background: #00FF00;
-                border-radius: 50%;
-                animation: pulse 2s infinite;
-            "></div>
-        </div>
-        <style>
-            @keyframes pulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.5; }
-                100% { opacity: 1; }
-            }
-        </style>
-    `;
-    
-    document.body.appendChild(indicator);
-    
-    // Add voice command help tooltip
-    const helpTooltip = document.createElement('div');
-    helpTooltip.id = 'voice-help';
-    helpTooltip.innerHTML = `
-        <div style="
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            z-index: 1000;
-            border: 1px solid #00ACC1;
-            max-width: 300px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        ">
-            <strong>🎤 Voice Commands:</strong><br>
-            • "Squat" or "Thunder Stomp"<br>
-            • "Lunge" or "Swift Strike"<br>
-            • "Plank" or "Iron Defense"<br>
-            • "T Pose" or "Intimidate"
-        </div>
-    `;
-    
-    document.body.appendChild(helpTooltip);
-}
-
 // Initialize the game when the page loads
 window.addEventListener('load', function() {
     console.log('Initializing Exerbeasts battle system...');
@@ -1672,9 +1303,6 @@ window.addEventListener('load', function() {
 
 // Battle Interface Integration
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize voice controller
-    window.voiceController = new VoiceCommandController();
-    
     const battleText = document.getElementById('battle-text');
     const actionButtons = document.querySelectorAll('.action-btn');
     
@@ -1717,18 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        console.log('Battle interface and voice system fully integrated!');
-        
-        // Add voice command indicator
-        addVoiceCommandIndicator();
-        
-        // Start voice listening when battle interface is ready
-        setTimeout(() => {
-            if (window.voiceController) {
-                window.voiceController.startListening();
-                console.log('Voice commands activated!');
-            }
-        }, 1000);
+        console.log('Battle interface fully integrated!');
     };
     
     // Auto-initialize camera when page loads
@@ -1989,3 +1606,16 @@ async function callFeedback(file, exercise) {
     }
 }
 
+async function voiceControl() {
+    try {
+        // Now returns the transcript/pose instead of a mapped command
+        const result = await controller.listenAndMapCommand();
+        if (typeof result === 'object' && result !== null && 'transcript' in result) {
+            return result.transcript;
+        } else {
+            return;
+        }
+    } catch (err) {
+        console.log(`Voice control error: ${err.message}`);
+    }
+}
